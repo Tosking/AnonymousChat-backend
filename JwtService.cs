@@ -33,7 +33,7 @@ public class JwtService
 
         return tokenHandler.WriteToken(token);
     }
-    public ClaimsPrincipal ValidateJwtToken(string token)
+    public string? ValidateJwtToken(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Convert.FromBase64String(_secretKey);
@@ -52,7 +52,7 @@ public class JwtService
         {
             SecurityToken validatedToken;
             var principal = tokenHandler.ValidateToken(token, validationParameters, out validatedToken);
-            return principal;
+            return principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
         }
         catch (Exception ex)
         {

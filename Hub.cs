@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using MongoDB.Driver;
+using MongoDB.Bson;
 using static JwtService;
 using System;
 
@@ -14,7 +15,16 @@ namespace TRPO
         private readonly JwtService _jwtService;
 
         private readonly IMongoDatabase database;
-        Dictionary<string, string> myDictionary = new Dictionary<string, string>();
+        Dictionary<string, string> usersDict = new Dictionary<string, string>();
+
+        private (string, string) CreateUserDB(string name){
+            var newUser = new User
+                {
+                    Name = name
+                };
+            _users.InsertOneAsync(newUser);
+            return (newUser.Id ,_jwtService.GenerateJwtToken(newUser.Id));
+        }
 
         public ChatHub()
         {
@@ -35,30 +45,39 @@ namespace TRPO
 
         public async Task CreateUser(string name){
             var httpContext = Context.GetHttpContext();
-            httpContext?.Response.Cookies.Append("IdToken", "cookieValue");
 
+            var userData = CreateUserDB(name);
+            var userId = userData.Item1;
+            var userToken = userData.Item2;
+
+            await Clients.Client(Context.ConnectionId).SendAsync("CreateUser", name, userId, userToken);
         }
 
-        public async Task CreateChatroom(string name){
-            var chat = new Chatroom {
-                Name = name,
-                UserIds = new[] {
-                    new ObjectId()
-                }
-            };
+        public async Task CreateChatroom(string token, string name){
+            var userId = _jwtService.ValidateJwtToken(token);
+            if(userId != null){
+                var chat = new Chatroom {
+                    Name = name,
+                    UserIds = new[] {
+                        new ObjectId(userId)
+                    }
+                };
+                await _chatRooms.InsertOneAsync(chat);
+                await Clients.Client(Context.ConnectionId).SendAsync("CreateChatroom", name, chat.Id);
+            }
         }
 
-        public override Task? OnConnectedAsync()
+        public override Task OnConnectedAsync()
         {
-            var token = Context.GetHttpContext().Request.Query["token"]; 
+            /*var token = Context.GetHttpContext().Request.Query["token"]; 
             var principal = _jwtService.ValidateJwtToken(token);
 
             if (principal == null)
             {
 
                 Context.Abort();
-                return null;
-            }
+                return Task.CompletedTask;
+            }*/
             Console.WriteLine(Context.ConnectionId);
             Clients.All.SendAsync("ReceiveMessage", Context.ConnectionId);
             return base.OnConnectedAsync();
