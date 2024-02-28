@@ -20,14 +20,14 @@ public class JwtService
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId)
+            new Claim("id", userId)
         };
 
         var token = new JwtSecurityToken(
             issuer: "TRPO",
             audience: "chats",
             claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
+            expires: DateTime.UtcNow.AddDays(365),
             signingCredentials: credentials
         );
 
@@ -52,7 +52,7 @@ public class JwtService
         {
             SecurityToken validatedToken;
             var principal = tokenHandler.ValidateToken(token, validationParameters, out validatedToken);
-            return principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            return principal.FindFirst("id")?.Value;
         }
         catch (Exception ex)
         {

@@ -38,9 +38,12 @@ namespace TRPO
             _users = database.GetCollection<User>("Users");
         }
 
-        public async Task SendMessage(string user, string message)
+        public async Task SendMessage(string token, string chatroomId, string message)
         {
-            await Clients.All.SendAsync("ReceiveMessage", user, message);
+            var userId = _jwtService.ValidateJwtToken(token);
+            if(userId != null){
+                await Clients.Group(chatroomId).SendAsync("ReceiveMessage", userId, message);
+            }
         }
 
         public async Task CreateUser(string name){
@@ -50,20 +53,57 @@ namespace TRPO
             var userId = userData.Item1;
             var userToken = userData.Item2;
 
+            usersDict[userId] = Context.ConnectionId;
             await Clients.Client(Context.ConnectionId).SendAsync("CreateUser", name, userId, userToken);
+        }
+
+        public async Task ConnectUser(string token, string chatroom){
+            var userId = _jwtService.ValidateJwtToken(token);
+            if(userId != null){
+                usersDict[userId] = Context.ConnectionId;
+                if(chatroom != null) await Groups.AddToGroupAsync(Context.ConnectionId, chatroom);
+            }
         }
 
         public async Task CreateChatroom(string token, string name){
             var userId = _jwtService.ValidateJwtToken(token);
+            Console.WriteLine(token);
             if(userId != null){
+                Console.WriteLine(userId);
                 var chat = new Chatroom {
                     Name = name,
                     UserIds = new[] {
-                        new ObjectId(userId)
+                        ObjectId.Parse(userId)
                     }
                 };
                 await _chatRooms.InsertOneAsync(chat);
-                await Clients.Client(Context.ConnectionId).SendAsync("CreateChatroom", name, chat.Id);
+                await Groups.AddToGroupAsync(Context.ConnectionId, chat.Id);
+                await Clients.Client(Context.ConnectionId).SendAsync("JoinChatroom", name, chat.Id);
+            }
+        }
+
+        public async Task JoinChatroom(string token, string charoomId)
+        {
+            var userId = _jwtService.ValidateJwtToken(token);
+            if (userId != null)
+            {
+                var filter = Builders<Chatroom>.Filter.Eq("_id", ObjectId.Parse(charoomId));
+                var chatroom = await _chatRooms.Find(filter).FirstOrDefaultAsync();
+                if (chatroom == null)
+                {
+                    await Clients.Client(Context.ConnectionId).SendAsync("Error", "Chat not found");
+                }
+                else
+                {
+                    if (!chatroom.UserIds.Any(id => id == ObjectId.Parse(userId)))
+                    {
+                        var update = Builders<Chatroom>.Update.Push("userIds", userId);
+                        await _chatRooms.UpdateOneAsync(filter, update);
+                    }
+
+                    await Groups.AddToGroupAsync(Context.ConnectionId, charoomId);
+                    await Clients.Client(Context.ConnectionId).SendAsync("JoinChatroom", chatroom.Name, charoomId);
+                }
             }
         }
 
@@ -85,6 +125,8 @@ namespace TRPO
 
         public override Task OnDisconnectedAsync(Exception exception)
         {
+            var keyToRemove = usersDict.FirstOrDefault(x => x.Value == Context.ConnectionId).Key;
+            if (keyToRemove != null) usersDict.Remove(keyToRemove);
 
             return base.OnDisconnectedAsync(exception);
         }
