@@ -38,10 +38,22 @@ namespace TRPO
             _users = database.GetCollection<User>("Users");
         }
 
+        public async Task GetMessages(string token, string chatroomId){
+            var filter = Builders<Message>.Filter.Empty;
+            var messages = _messages.Find(filter).ToListAsync();
+            await Clients.Client(Context.ConnectionId).SendAsync("GetMessages", messages);
+        }
+
         public async Task SendMessage(string token, string chatroomId, string message)
         {
             var userId = _jwtService.ValidateJwtToken(token);
             if(userId != null){
+                var messageModel = new Message{
+                    UserId = ObjectId.Parse(userId),
+                    ChatId = ObjectId.Parse(chatroomId),
+                    Content = message
+                };
+                await _messages.InsertOneAsync(messageModel);
                 await Clients.Group(chatroomId).SendAsync("ReceiveMessage", userId, message);
             }
         }
@@ -119,7 +131,7 @@ namespace TRPO
                 return Task.CompletedTask;
             }*/
             Console.WriteLine(Context.ConnectionId);
-            Clients.All.SendAsync("ReceiveMessage", Context.ConnectionId);
+            //Clients.All.SendAsync("ReceiveMessage", Context.ConnectionId);
             return base.OnConnectedAsync();
         }
 

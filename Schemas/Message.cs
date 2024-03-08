@@ -16,5 +16,14 @@ namespace TRPO
 
         [BsonElement("content")]
         public string Content { get; set; }
+
+        [BsonElement("timestamp")]
+        [BsonRepresentation(BsonType.DateTime)]
+        public DateTime Timestamp { get; set; }
+
+        public Message()
+        {
+            Timestamp = DateTime.Now;
+        }
     }
 }
