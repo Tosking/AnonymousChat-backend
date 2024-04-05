@@ -39,8 +39,9 @@ namespace TRPO
         }
 
         public async Task GetMessages(string token, string chatroomId){
-            var filter = Builders<Message>.Filter.Empty;
-            var messages = _messages.Find(filter).ToListAsync();
+            var filter = Builders<Message>.Filter.Eq("chatId", ObjectId.Parse(chatroomId));
+            var messages = await _messages.Find(filter).ToListAsync();
+            //Console.WriteLine(messages);
             await Clients.Client(Context.ConnectionId).SendAsync("GetMessages", messages);
         }
 
