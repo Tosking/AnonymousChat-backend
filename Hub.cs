@@ -39,9 +39,19 @@ namespace TRPO
         }
 
         public async Task GetMessages(string token, string chatroomId){
-            var filter = Builders<Message>.Filter.Eq("chatId", ObjectId.Parse(chatroomId));
-            var messages = await _messages.Find(filter).ToListAsync();
-            await Clients.Client(Context.ConnectionId).SendAsync("GetMessages", messages);
+            var userId = _jwtService.ValidateJwtToken(token);
+            if(userId != null){
+                var filter = Builders<Message>.Filter.Eq("chatId", ObjectId.Parse(chatroomId));
+                var messages = await _messages.Find(filter).ToListAsync();
+                await Clients.Client(Context.ConnectionId).SendAsync("GetMessages", messages);
+            }
+        }
+
+        public async Task GetChatrooms(string token){
+            var userId = _jwtService.ValidateJwtToken(token);
+            //var filter = Builders<Chatroom>.Filter.ElemMatch(u => u.UserIds, user => user == ObjectId.Parse(userId));
+            var result = await _chatRooms.Find(u => u.UserIds.Any(u => u == ObjectId.Parse(userId))).ToListAsync();
+            await Clients.Client(Context.ConnectionId).SendAsync("GetChatrooms", result);
         }
 
         public async Task SendMessage(string token, string chatroomId, string message)
