@@ -10,5 +10,9 @@ namespace TRPO
 
         [BsonElement("name")]
         public string Name { get; set; }
+        [BsonElement("hash")]
+        public string Hash { get; set; }
+        [BsonElement("salt")]
+        public string Salt { get; set; }
     }
 }

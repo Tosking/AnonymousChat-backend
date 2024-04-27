@@ -43,7 +43,16 @@ namespace TRPO
             if(userId != null){
                 var filter = Builders<Message>.Filter.Eq("chatId", ObjectId.Parse(chatroomId));
                 var messages = await _messages.Find(filter).ToListAsync();
-                await Clients.Client(Context.ConnectionId).SendAsync("GetMessages", messages);
+                Console.WriteLine(messages);
+                for(int i = 0; i < messages.Count; i++){
+                    var filterForUser = Builders<User>.Filter.Eq("Id", messages[i].UserId);
+                    var user = await _users.Find(filterForUser).FirstOrDefaultAsync();
+                    var message = new Dictionary<string, string>();
+                    message["id"] = messages[i].UserId.ToString();
+                    message["content"] = messages[i].Content;
+                    message["name"] = user.Name;
+                    await Clients.Client(Context.ConnectionId).SendAsync("ReceiveMessage", message);
+                }
             }
         }
 
@@ -63,8 +72,14 @@ namespace TRPO
                     ChatId = ObjectId.Parse(chatroomId),
                     Content = message
                 };
+                var filterForUser = Builders<User>.Filter.Eq("Id", userId);
+                var user = await _users.Find(filterForUser).FirstOrDefaultAsync();
+                var messageResponse = new Dictionary<string, string>();
+                messageResponse["id"] = userId;
+                messageResponse["content"] = message;
+                messageResponse["name"] = user.Name;
                 await _messages.InsertOneAsync(messageModel);
-                await Clients.Group(chatroomId).SendAsync("ReceiveMessage", userId, message);
+                await Clients.Group(chatroomId).SendAsync("ReceiveMessage", messageResponse);
             }
         }
 
