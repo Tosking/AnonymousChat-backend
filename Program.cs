@@ -10,11 +10,11 @@ builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy",
-        builder => builder
-            .WithOrigins("http://localhost:3000")
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials());
+                      builder => builder
+                      .WithOrigins("http://localhost:3000", "http://172.19.0.2:3000", "172.19.0.2:3000")
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials());
 });
 
 var app = builder.Build();
@@ -25,15 +25,15 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-//app.UseHttpsRedirection();
-//app.UseStaticFiles();
+// Удалены строки использования HTTPS перенаправления и статических файлов
+// app.UseHttpsRedirection();
+// app.UseStaticFiles();
 
 app.UseRouting();
 
 app.UseAuthorization();
 
 app.UseCors("CorsPolicy");
-
 
 app.MapRazorPages();
 app.UseEndpoints(endpoints =>

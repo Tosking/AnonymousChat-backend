@@ -30,7 +30,7 @@ namespace TRPO
         {
             _jwtService = new JwtService("63e8781bc55321d2dca81a6fa32c53f0e6038dee9700be2c15c982672cdc69abe7733a2760e3d0a44104d68d4f2add1b1eca308d15e6ca5ed3fbd7f68a439170");
 
-            var client = new MongoClient("mongodb://localhost:27017");
+            var client = new MongoClient("mongodb://mongo:27017");
 
             var database = client.GetDatabase("TRPO_chats");
             _messages = database.GetCollection<Message>("Messages");
