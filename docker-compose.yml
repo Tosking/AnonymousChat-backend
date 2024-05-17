@@ -1,0 +1,16 @@
+services:
+  front:
+    image: anon-front
+    ports:
+      - "3000:3000"
+  back:
+    image: anon-back
+    environment:
+      - ConnectionStrings__mongo=mongodb://mongo:27017
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "5075:8080"
+    depends_on:
+      - mongo
+  mongo:
+    image: mongo:latest
